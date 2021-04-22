@@ -1,0 +1,21 @@
+﻿<Page
+    x:Class="FTP_UWP.Chat"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:FTP_UWP"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Loaded="Page_Loaded"
+    Height="580"
+    Width="610">
+
+    <Grid>
+        <ListBox x:Name="ListUsers" HorizontalAlignment="Left" Height="560" Margin="10,10,0,0" VerticalAlignment="Top" Width="193" SelectionChanged="ListUsers_SelectionChanged"/>
+        <Border BorderBrush="Lime" BorderThickness="1" CornerRadius="2" VerticalAlignment="Top" HorizontalAlignment="Left" Height="525" Margin="219,10,0,0" Width="382">
+            <TextBlock x:Name="ChatBox" HorizontalAlignment="Left"  Height="523" Margin="1,1,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="380" FontSize="14" RequestedTheme="Default"/>
+        </Border>
+        <TextBox x:Name="message" HorizontalAlignment="Left" Margin="219,538,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="324" KeyDown="TextBox_KeyDown"/>
+        <Button Content="Send" Margin="548,538,0,0" VerticalAlignment="Top" Width="52" Click="Button_Click"/>
+    </Grid>
+</Page>
