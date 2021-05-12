@@ -11,6 +11,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,9 +22,9 @@ namespace Server
 {
     public static class Mysql
     {
-        private static string pass = "1uniCorn1_";
-        static MySqlConnection con = new MySqlConnection("Server=localhost;Database=ftp_chat;User=sDether;Password=1namQfeg1_;");
-        static MySqlConnection conas = new MySqlConnection("Server=localhost;Database=ftp_chat;User=sDether;Password=1namQfeg1_;");
+        static string constring = File.ReadAllText("mysql");
+        static MySqlConnection con = new MySqlConnection(constring);
+        static MySqlConnection conas = new MySqlConnection(constring);
         public static void com(string cm, object[] parm)
         {
             if ((con.State & ConnectionState.Open) != 0)
