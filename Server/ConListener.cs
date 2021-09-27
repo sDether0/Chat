@@ -6,11 +6,11 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
+using JsonClasses;
 
 namespace Server
 {
-    class ConListener
+    class ConListener : IReceiver, ISender
     {
         public delegate void ListenHandler(object sender, EventArgs e, Socket sock);
         public event ListenHandler listenSucces;
@@ -37,7 +37,7 @@ namespace Server
 
         }
 
-        public string ReceiveMessage(Socket sock)
+        public ISendible ReceiveMessage(Socket sock)
         {
             byte[] size = new byte[4];
             Receive(sock, size, 0, size.Length, 100000);
@@ -45,10 +45,10 @@ namespace Server
             byte[] buffer = new byte[sz];
             Receive(sock, buffer, 0, buffer.Length, 100000);
             var str = Encoding.UTF8.GetString(buffer);
-            return str;
+            return conv.Parse(str);
         }
 
-        public void Receive(Socket socket, byte[] buffer, int offset, int size, int timeout)
+        private void Receive(Socket socket, byte[] buffer, int offset, int size, int timeout)
         {
             int startTickCount = Environment.TickCount;
             int received = 0;  // how many bytes is already received
@@ -74,8 +74,9 @@ namespace Server
                 }
             } while (received < size);
         }
-        public void SendMessage(Socket sock, string str)
+        public void SendMessage(Socket sock, ISendible mess)
         {
+            string str = mess.ObJsStr();
             var packet = Encoding.UTF8.GetBytes(str);
             int size = packet.Length;
             byte[] sz = BitConverter.GetBytes(size);
@@ -91,10 +92,9 @@ namespace Server
             var str = BitConverter.ToInt32(sz);
             Send(sock, sz, 4, 0, 100000);
             Send(sock, file, size, 0, 100000);
-
         }
 
-        public void Send(Socket socket, byte[] buffer, int size, int offset, int timeout)
+        private void Send(Socket socket, byte[] buffer, int size, int offset, int timeout)
         {
             int startTickCount = Environment.TickCount;
             int sent = 0;  // how many bytes is already sent

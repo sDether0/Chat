@@ -3,48 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JsonClasses;
 using MySql;
 
 namespace Server
 {
     static class MessageHistory
     {
-        public static void SaveMessage(string Name1, string Name2, string text)
+        public static void SaveMessage(string fromuser, string touser, string text)
         {
-            string command = "select text from history where (name1=@p1 and name2=@p2) or (name1=@p2 and name2=@p1)";
-            var dt = Mysql.fill(command, new[] { Name1, Name2 });
-            if (dt.Rows.Count > 0)
-            {
-                var t = dt.Rows[0][0].ToString() + "\r\n" + text;
-                string com = "update history set text = @p1 where (name1=@p2 and name2=@p3) or (name1=@p3 and name2=@p2)";
-                Mysql.com(com,new[] {t,Name1,Name2});
-            }
-            else
-            {
-                string com = "insert into history (name1, name2, text) values (@p1, @p2, @p3)";
-                Mysql.com(com, new[] { Name1, Name2, text });
-            }
+            string com = "insert into history (fromuser, touser, time, text) values (@p1, @p2, @p3, @p4)";
+            var time = DateTime.UtcNow;
+            Mysql.com(com, new object[] { fromuser, touser, time, text });
         }
 
-        public static string[,] GetMessageHistory(string Name1)
+        public static List<HistoryMessage> GetMessageHistory(string fromuser)
         {
-            string command = "select text, name1, name2 from history where name1=@p1 or name2=@p1";
-            var dt = Mysql.fill(command,new[] { Name1 });
+            string command = "select time, text, fromuser, touser from history where fromuser=@p1 or touser=@p1";
+            var dt = Mysql.fill(command, new[] { fromuser });
             var len = dt.Rows.Count;
-            string[,] result = new string[len,2];
-            for (int i=0;i<dt.Rows.Count;i++)
+            List<HistoryMessage> list = new List<HistoryMessage>();
+            for (int i = 0; i < dt.Rows.Count; i++)
             {
-                result[i, 0] = dt.Rows[i][0].ToString();
-                if (dt.Rows[i][1].ToString() != Name1)
+                if (dt.Rows[i][2].ToString() == fromuser)
                 {
-                    result[i, 1] = dt.Rows[i][1].ToString();
+                    list.Add(new HistoryMessage() { time = Convert.ToDateTime(dt.Rows[i][0].ToString()), text = dt.Rows[i][1].ToString(), login = dt.Rows[i][3].ToString(), self = true });
                 }
                 else
                 {
-                    result[i, 1] = dt.Rows[i][2].ToString();
+                    list.Add(new HistoryMessage() { time = Convert.ToDateTime(dt.Rows[i][0].ToString()), text = dt.Rows[i][1].ToString(), login = dt.Rows[i][2].ToString(), self = false });
                 }
             }
-            return result;
+            return list;
         }
     }
 }

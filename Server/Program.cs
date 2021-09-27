@@ -20,15 +20,16 @@ using JsonClasses;
 
 namespace Server
 {
-    
     class UsSocket
     {
         public string Name;
+        public string Nick;
         public List<Socket> sock = new List<Socket>();
 
-        public UsSocket(string name, Socket sck = null)
+        public UsSocket(string name, string nick, Socket sck = null)
         {
             Name = name;
+            Nick = nick;
             if (sck != null)
             {
                 sock.Add(sck);
@@ -39,18 +40,16 @@ namespace Server
     
     class Commands
     {
-        [Command("!Message")]
+        [Command(SecondType.Message)]
         public static void Message(Socket sock, Input inp)
         {
             if (connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.type + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
                 connectedSockets.Find(x => x.Name == inp.nick).sock.ForEach(r =>
                 {
                     var mess = new Message(inp.text,connectedSockets.Find(f=>f.sock.Contains(sock)).Name);
-                    var smess = mess.ObJsStr();
-                    //var mess = "{type: '!Message', text: '" + text + "', nick: '" + connectedSockets.Find(t => t.sock.Contains(sock)).Name + "'}";
-                    cl.SendMessage(r, smess);
+                    cl.SendMessage(r, mess);
                 });
                 DebugLog.WriteLine("Start saving");
                 MessageHistory.SaveMessage(connectedSockets.Find(x => x.sock.Contains(sock)).Name, inp.nick, inp.text);
@@ -58,65 +57,56 @@ namespace Server
             }
             else
             {
-                cl.SendMessage(sock, "{ \"type\":\"!NeedLogin\"}");
+                cl.SendMessage(sock, provider.NeedLogin);
             }
         }
 
-        [Command("!GetHistory")]
+        [Command(SecondType.GetHistory)]
         public static void GetHistory(Socket sock, Input inp)
         {
-            if(connectedSockets.Any(x => x.sock.Contains(sock)))
+            if (connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.type + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
                 var list = MessageHistory.GetMessageHistory(connectedSockets.Find(x => x.sock.Contains(sock)).Name);
                 var mess = new History();
-                for(int i = 0; i < list.GetLength(0); i++)
-                {
-                    if (connectedSockets.Any(x => x.Name == list[i, 1]))
-                    {
-                        var t = string.Join('\n',list[i, 0].Split("\n").TakeLast(15));
-                        mess.Add(list[i,1],t);
-                    }
-                }
-                var smess = mess.ObJsStr();
-                cl.SendMessage(sock, smess);
+                mess.messages = list;
+                cl.SendMessage(sock, mess);
             }
             else
             {
-                cl.SendMessage(sock, "{ \"type\":\"!NeedLogin\"}");
+                cl.SendMessage(sock, provider.NeedLogin);
             }
         }
 
-        [Command("!Refresh")]
+        [Command(SecondType.Refresh)]
         public static void Refresh(Socket sock, Input inp)
         {
             if (connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.type + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
                 var sender = connectedSockets.Find(x => x.sock.Contains(sock)).Name;
                 var mess = new Refresh();
                 connectedSockets.ForEach(x =>
                 {
                     if (x.Name != sender)
                     {
-                        mess.Add(x.Name);
+                        mess.Add(x.Nick, x.Name);
                     }
                 });
-                var smess = mess.ObJsStr();
-                cl.SendMessage(sock, smess);
+                cl.SendMessage(sock, mess);
             }
             else
             {
-                cl.SendMessage(sock, "{ \"type\":\"!NeedLogin\"}");
+                cl.SendMessage(sock, provider.NeedLogin);
             }
         }
 
-        [Command("!GetRoot")]
+        [Command(SecondType.GetRoot)]
         public static void GetRoot(Socket sock, Input inp)
         {
             if (connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.type + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
                 var mess = new Root();
                 var files = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "*",
                     SearchOption.AllDirectories);
@@ -131,22 +121,21 @@ namespace Server
                         mess.paths.Add(new SPath(x, false));
                     }
                 });
-                var smess = mess.ObJsStr();
-                cl.SendMessage(sock, smess);
+                cl.SendMessage(sock, mess);
             }
             else
             {
-                cl.SendMessage(sock, "{ \"type\":\"!NeedLogin\"}");
+                cl.SendMessage(sock, provider.NeedLogin);
             }
         }
 
-        [Command("!GetFile")]
+        [Command(SecondType.GetFile)]
         public static void GetFile(Socket sock, Input inp)
         {
             if (connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.type + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
-                cl.SendMessage(sock, "{\"type\":\"!File\"");
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                cl.SendMessage(sock, provider.File);
                 DebugLog.WriteLine(inp.file);
                 long s = File.OpenRead(inp.file).Length;
                 var file = File.ReadAllBytes(inp.file);
@@ -154,14 +143,14 @@ namespace Server
             }
             else
             {
-                cl.SendMessage(sock, "{ \"type\":\"!NeedLogin\"}");
+                cl.SendMessage(sock, provider.NeedLogin);
             }
         }
 
-        [Command("!Login")]
+        [Command(SecondType.Login)]
         public static void Login(Socket sock, Input inp)
         {
-            DebugLog.WriteLine(inp.type);
+            DebugLog.WriteLine(inp.sInputType.ToString());
             var name = inp.login;
             var pass = inp.pass;
             var dt = Mysql.fill("Select * from ftp_chat.users where Username = @p1 and Password = @p2", new[] { name, pass });
@@ -178,52 +167,56 @@ namespace Server
                         connectedSockets.Find(x => x.Name == name).sock.Add(sock);
                     }
 
-                    cl.SendMessage(sock, "{\"type\":\"!Successlog\"}");
+                    cl.SendMessage(sock, provider.SuccessLogin);
                     DebugLog.WriteLine("Sended");
                     return;
                 }
             }
-            cl.SendMessage(sock, "{\"type\":\"!Deniedlog\"}");
+            cl.SendMessage(sock, provider.DeniedLogin);
 
         }
 
-        [Command("!Signin")]
+        [Command(SecondType.SignIn)]
         public static void Signin(Socket sock, Input inp)
         {
-            DebugLog.WriteLine(inp.type);
+            DebugLog.WriteLine(inp.sInputType.ToString());
+            Console.WriteLine(inp.sInputType.ToString());
+            var nick = inp.nick;
+            Console.WriteLine(nick);
             var name = inp.login;
             var pass = inp.pass;
             DebugLog.WriteLine("Try db");
             var dt = Mysql.fill("Select * from users where Username = @p1", new[] { name });
             DebugLog.WriteLine("Db success");
+            Console.WriteLine("Db success");
             if (dt.Rows.Count > 0)
             {
                 Console.WriteLine("Denied");
-                cl.SendMessage(sock, "{\"type\":\"!Deniedsign\"}");
+                cl.SendMessage(sock, provider.DeniedSignin);
             }
             else
             {
                 DebugLog.WriteLine("Inserting");
                 Mysql.com("Insert into users (Username, Password) values (@p1, @p2)", new[] { name, pass });
                 Console.WriteLine("Success");
-                connectedSockets.Add(new UsSocket(name, sock));
-                cl.SendMessage(sock, "{\"type\":\"!Successsign\"}");
+                connectedSockets.Add(new UsSocket(name,nick, sock));
+                cl.SendMessage(sock, provider.SuccessSignin);
             }
         }
     }
     class Program
     {
-        
+        public static IInfoProvider provider = new ServerInputProvider();
         public static List<UsSocket> connectedSockets = new List<UsSocket>();
         public static ConListener cl = new ConListener();
 
         static void Main(string[] args)
         {
-            string command = "select Username from users";
+            string command = "select Username, Nickname from users";
             var dt = Mysql.fill(command);
             foreach (DataRow dr in dt.Rows)
             {
-                connectedSockets.Add(new UsSocket(dr[0].ToString()));
+                connectedSockets.Add(new UsSocket(dr[0].ToString(),  dr[1].ToString()));
             }
             IPAddress ip = IPAddress.Parse("0.0.0.0");
             Socket sock = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -258,33 +251,32 @@ namespace Server
             }
         }
 
-        public static MethodInfo GetCommand(string str)
+        public static MethodInfo GetCommand(SecondType type)
         {
             return typeof(Commands).GetMethods().Where(x => x.GetCustomAttributes(false).OfType<Command>().Count() > 0)
-                .Where(y => y.GetCustomAttributes(false).OfType<Command>().First().Trigger == str).First();
+                .Where(y => y.GetCustomAttributes(false).OfType<Command>().First().Trigger == type).First();
         }
 
         private static void Cl_listenSucces(object sender, EventArgs e, Socket sock)
         {
-            Console.WriteLine("Connected ");
+            Console.WriteLine("Connected "+sock.RemoteEndPoint.Serialize());
 
-            new Thread(() =>
+            new Task(() =>
             {
                 try
                 {
 
                     while (sock.Connected)
                     {
-                        var str = cl.ReceiveMessage(sock);
-                        //Console.WriteLine(str);
-                        var job = JObject.Parse(str);
-                        Input inp = job.ToObject<Input>();
-
-                        GetCommand(inp.type).Invoke(null, new object[] { sock, inp });
+                        var res = cl.ReceiveMessage(sock);
+                        Input inp = (Input)res;
+                        Console.WriteLine(inp.fInputType);
+                        GetCommand(inp.sInputType).Invoke(null, new object[] { sock, inp });
                     }
                 }
-                catch
+                catch(Exception e)
                 {
+                    Console.WriteLine(e.Message);
                     if (!sock.Connected)
                     {
                         Console.WriteLine("Disconnected" + sock.RemoteEndPoint.Serialize().ToString());

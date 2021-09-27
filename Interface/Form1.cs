@@ -61,7 +61,7 @@ namespace Interface
         Dictionary<string, string> chats = new Dictionary<string, string>();
         System.Media.SoundPlayer sp;
         string myname = "";
-
+        IInputProvider provider = new ClientInputProvider();
 
 
         public Form1()
@@ -106,17 +106,17 @@ namespace Interface
         {
             textBox3.KeyDown += TextBox3_KeyDown;
             cn.received += Cn_received;
-            cn.usreceived += Cn_usreceived;
-            cn.rtreceived += Cn_rtreceived;
-            cn.flreceived += Cn_flreceived;
-            cn.msreceived += Cn_msreceived;
-            cn.conLost += Cn_conLost;
-            cn.hsreceived += Cn_hsreceived;
+            cn.usersReceived += Cn_usersReceived;
+            cn.rootReceived += Cn_rootReceived;
+            cn.fileReceived += Cn_fileReceived;
+            cn.messageReceived += Cn_messageReceived;
+            cn.connectionLost += Cn_connectionLost;
+            cn.historyReceived += Cn_historyReceived;
         }
 
-        private void Cn_msreceived(Connector sender, JObject inp)
+        private void Cn_messageReceived(Connector sender, ISendible inp)
         {
-            var inpt = inp.ToObject<Message>();
+            var inpt = (Message)inp;
             Invoke(new Action(() =>
             {
                 //sp.Play();
@@ -165,16 +165,20 @@ namespace Interface
             }
         }
 
-        private void Cn_hsreceived(Connector sender, JObject inp)
+        private void Cn_historyReceived(Connector sender, ISendible inp)
         {
-            var inpt = inp.ToObject<History>();
-            inpt.users.ForEach(x =>
+            var inpt = (History)inp;
+            inpt.messages.ForEach(x =>
             {
-                if (chats.ContainsKey(x.nick))
+                
+            });
+            inpt.messages.ForEach(x =>
+            {
+                if (chats.ContainsKey(x.login))
                 {
                     var todecr = x.text.Replace("\r", "").Split("\n");
-                    var key = myname + File.ReadAllText("key") + x.nick;
-                    var rkey = x.nick + File.ReadAllText("key") + myname;
+                    var key = myname + File.ReadAllText("key") + x.login;
+                    var rkey = x.login + File.ReadAllText("key") + myname;
                     var res = String.Join(Environment.NewLine, todecr.ToList().Select(z =>
                     {
                         if (!string.IsNullOrEmpty(z))
@@ -190,13 +194,13 @@ namespace Interface
                         }
                         return "";
                     }));
-                    chats[x.nick] = res;
+                    chats[x.login] = res;
                 }
                 else
                 {
                     var todecr = x.text.Replace("\r", "").Split("\n");
-                    var key = myname + File.ReadAllText("key") + x.nick;
-                    var rkey = x.nick + File.ReadAllText("key") + myname;
+                    var key = myname + File.ReadAllText("key") + x.login;
+                    var rkey = x.login + File.ReadAllText("key") + myname;
                     var res = String.Join(Environment.NewLine, todecr.ToList().Select(z =>
                     {
                         if (!string.IsNullOrEmpty(z))
@@ -212,17 +216,17 @@ namespace Interface
                         }
                         return "";
                     }));
-                    chats.Add(x.nick, res);
+                    chats.Add(x.login, res);
                     Invoke(new Action(() =>
                     {
-                        comboBox1.Items.Add(x.nick);
+                        comboBox1.Items.Add(x.login);
                     }));
                 }
             });
 
         }
 
-        private void Cn_conLost(Connector sender, Exception e)
+        private void Cn_connectionLost(Connector sender, Exception e)
         {
             MessageBox.Show(e.Message);
             if (e.Message != "ConnectionLostRestart")
@@ -240,7 +244,7 @@ namespace Interface
         }
 
 
-        private void Cn_flreceived(Connector sender)
+        private void Cn_fileReceived(Connector sender)
         {
 
             var file = cn.ReceiveFile();
@@ -248,9 +252,9 @@ namespace Interface
 
         }
 
-        private void Cn_rtreceived(Connector sender, JObject inp)
+        private void Cn_rootReceived(Connector sender, ISendible inp)
         {
-            var inpt = inp.ToObject<Root>();
+            var inpt = (Root)inp;
             Invoke(new Action(() =>
             {
                 treeView1.Nodes.Clear();
@@ -278,9 +282,9 @@ namespace Interface
             });
         }
 
-        private void Cn_usreceived(Connector sender, JObject inp)
+        private void Cn_usersReceived(Connector sender, ISendible inp)
         {
-            var inpt = inp.ToObject<Refresh>();
+            var inpt = (Refresh)inp;
             inpt.users.ForEach(x =>
             {
                 if (!chats.ContainsKey(x.nick))
@@ -296,9 +300,8 @@ namespace Interface
             {
                 Invoke(new Action(() => { comboBox1.SelectedIndex = 0; }));
             }
-            var com = new Input() { type = "!GetHistory" };
-            var smess = com.ObJsStr();
-            cn.SendMessage(smess);
+            var mess = provider.CreateInput(sType:SecondType.GetHistory);
+            cn.SendMessage(mess);
         }
         public void ComboBoxUpdate()
         {
@@ -330,26 +333,25 @@ namespace Interface
             }));
         }
 
-        private void Cn_received(Connector sender, JObject inp)
+        private void Cn_received(Connector sender, ISendible inp)
         {
-            var str = inp["type"].ToString();
             Invoke(new Action(() =>
             {
-                if (str == "!Successlog")
+                if (inp.fInputType == InputType.SuccessLogin)
                 {
                     tabControl1.SelectedIndex = 1;
                     MinimumSize = new Size(580, 380);
                     //Size = new Size(540, 380);
                 }
-                if (str == "!Deniedlog")
+                if (inp.fInputType == InputType.DeniedLogin)
                 {
                     label3.Text = "Wrong credential";
                 }
-                if (str == "!Successsign")
+                if (inp.fInputType == InputType.SuccessSignin)
                 {
                     MessageBox.Show("Succesfully registered", "Success");
                 }
-                if (str == "!Deniedsign")
+                if (inp.fInputType == InputType.DeniedSignin)
                 {
                     MessageBox.Show("Username already used");
                 }
@@ -367,7 +369,7 @@ namespace Interface
             {
                 var key = comboBox1.Text + File.ReadAllText("key") + myname;
                 string message = Crypto.Encrypt(textBox3.Text, key);
-                cn.SendTo(message, comboBox1.Text);
+                var mess = provider.CreateInput(sType: SecondType.Message, args: new[] { comboBox1.Text, message });
                 chats[comboBox1.Text] += Environment.NewLine + textBox3.Text;
                 textBox3.Text = "";
                 textBox2.Text = chats[comboBox1.Text];
@@ -401,9 +403,8 @@ namespace Interface
         private void button3_Click(object sender, EventArgs e)
         {
             
-                var com = new Input() { type = "!Refresh" };
-                var smess = com.ObJsStr();
-                cn.SendMessage(smess);
+                var mess = provider.CreateInput(sType:SecondType.Refresh);
+                cn.SendMessage(mess);
                 button3.Enabled = false;
                 Task.Delay(5000).ContinueWith(delegate
                 {
@@ -421,9 +422,8 @@ namespace Interface
         private void button4_Click(object sender, EventArgs e)
         {
             
-                var com = new Input() { type = "!GetRoot" };
-                var smess = com.ObJsStr();
-                cn.SendMessage(smess);
+                var mess = provider.CreateInput(sType: SecondType.GetRoot);
+                cn.SendMessage(mess);
                 button4.Enabled = false;
                 Task.Delay(5000).ContinueWith(delegate
                 {
@@ -442,9 +442,8 @@ namespace Interface
                 fbd.RootFolder = Environment.SpecialFolder.Desktop;
                 if (fbd.ShowDialog() == DialogResult.OK)
                 {
-                    var com = new Input() { type = "!GetFile",file = treeView1.SelectedNode.FullPath };
-                    var smess = com.ObJsStr();
-                    cn.SendMessage(smess);
+                    var mess = provider.CreateInput(sType:SecondType.GetFile,args:treeView1.SelectedNode.FullPath);
+                    cn.SendMessage(mess);
                     Task.Delay(1200);
                     var name = treeView1.SelectedNode.Text;
                     savepath = fbd.SelectedPath + "\\" + name;
@@ -459,18 +458,16 @@ namespace Interface
 
         private void button6_Click(object sender, EventArgs e)
         {
-            var com = new Input() { type = "!Login",login=textBox4.Text,pass=textBox5.Text };
-            var smess = com.ObJsStr();
-            cn.SendMessage(smess);
+            var mess = provider.CreateInput(sType: SecondType.Login,args:new[]{textBox4.Text,textBox5.Text});
+            cn.SendMessage(mess);
             myname = textBox4.Text;
         }
 
 
         private void button7_Click(object sender, EventArgs e)
         {
-            var com = new Input() { type = "!Signin", login = textBox4.Text, pass = textBox5.Text };
-            var smess = com.ObJsStr();
-            cn.SendMessage(smess);
+            var mess = provider.CreateInput(sType: SecondType.SignIn, args: new[] { textBox4.Text, textBox5.Text, "test" });
+            cn.SendMessage(mess);
 
         }
 

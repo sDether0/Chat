@@ -1,13 +1,37 @@
-﻿using Newtonsoft.Json.Linq;
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace JsonClassesUWP
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+namespace JsonClasses
 {
+    public enum InputType
+    {
+        Input,
+        Message,
+        History,
+        Refresh,
+        Root,
+        NeedLogin,
+        File,
+        SuccessLogin,
+        SuccessSignin,
+        DeniedLogin,
+        DeniedSignin
+    }
+
+    public enum SecondType
+    {
+        Message,
+        GetFile,
+        Login,
+        SignIn,
+        Refresh,
+        GetRoot,
+        GetHistory
+    }
     public static class conv
     {
         public static string ObJsStr(this object mess)
@@ -16,27 +40,34 @@ namespace JsonClassesUWP
             var smess = jmess.ToString();
             return smess;
         }
+        public static ISendible Parse(string str)
+        {
+            return JObject.Parse(str).ToObject<ISendible>();
+        }
     }
-    public class Input
+    public class Input : ISendible
     {
-        public string type;
+        public Input() => fInputType = InputType.Input;
+        public SecondType sInputType;
         public string nick;
         public string text;
         public string file;
         public string pass;
         public string login;
     }
-    public abstract class ISender
+
+    public abstract class ISendible
+    {
+        public InputType fInputType;
+    }
+    public class Message : ISendible
     {
 
-    }
-    public class Message : ISender
-    {
-        public string type = "!Message";
         public string text;
         public string nick;
         public Message(string text, string nick)
         {
+            fInputType = InputType.Message;
             this.text = text;
             this.nick = nick;
         }
@@ -45,24 +76,36 @@ namespace JsonClassesUWP
     {
         public string nick;
         public string text;
+        public string login;
     }
-    public class History : ISender
+    public class Info : ISendible
     {
-        public string type = "!History";
-        public List<user> users = new List<user>();
 
-        public void Add(string nick, string text)
+    }
+    public class HistoryMessage
+    {
+        public string login;
+        public DateTime time;
+        public string text;
+        public bool self;
+    }
+    public class History : ISendible
+    {
+        public History() => fInputType = InputType.History;
+        public List<HistoryMessage> messages = new List<HistoryMessage>();
+
+        public void Add(DateTime time, string login, string text, bool self)
         {
-            users.Add(new user() { nick = nick, text = text });
+            messages.Add(new HistoryMessage() { login = login, time = time, text = text, self = self });
         }
     }
-    public class Refresh : ISender
+    public class Refresh : ISendible
     {
-        public string type = "!Refresh";
+        public Refresh() => fInputType = InputType.Refresh;
         public List<user> users = new List<user>();
-        public void Add(string nick)
+        public void Add(string nick, string login)
         {
-            users.Add(new user() { nick = nick, text = null });
+            users.Add(new user() { nick = nick, login = login, text = null });
         }
     }
     public class SPath
@@ -72,14 +115,14 @@ namespace JsonClassesUWP
             path = p;
             file = f;
         }
-        
         public string path;
         public bool file;
     }
-    public class Root : ISender
+    public class Root : ISendible
     {
-        public string type = "!Root";
+        public Root() => fInputType = InputType.Root;
 
         public List<SPath> paths = new List<SPath>();
     }
+
 }

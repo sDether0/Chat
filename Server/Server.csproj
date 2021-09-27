@@ -17,4 +17,10 @@
     <ProjectReference Include="..\Logger\Logger.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="mysql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

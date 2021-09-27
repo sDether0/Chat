@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JsonClasses;
 
 namespace Server
 {
-    class Command : System.Attribute
+    class Command : Attribute
     {
-        public string Trigger { get; private set; }
+        public SecondType Trigger { get; private set; }
 
-        public Command(string trigger)
+        public Command(SecondType type)
         {
-            Trigger = trigger;
+            Trigger = type;
         }
 
     }

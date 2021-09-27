@@ -16,20 +16,20 @@ namespace FTP_Personal
 {
     public class Connector
     {
-        public delegate void RecieveMessage(Connector sender, JObject inp);
-        public event RecieveMessage msreceived;
-        public delegate void RecieveUsers(Connector sender, JObject inp);
-        public event RecieveUsers usreceived;
-        public delegate void RecieveHistory(Connector sender, JObject inp);
-        public event RecieveHistory hsreceived;
-        public delegate void RecieveRoot(Connector sender, JObject inp);
-        public event RecieveRoot rtreceived;
+        public delegate void RecieveMessage(Connector sender, ISendible inp);
+        public event RecieveMessage messageReceived;
+        public delegate void RecieveUsers(Connector sender, ISendible inp);
+        public event RecieveUsers usersReceived;
+        public delegate void RecieveHistory(Connector sender, ISendible inp);
+        public event RecieveHistory historyReceived;
+        public delegate void RecieveRoot(Connector sender, ISendible inp);
+        public event RecieveRoot rootReceived;
         public delegate void RecieveFile(Connector sender);
-        public event RecieveFile flreceived;
-        public delegate void Recieve(Connector sender, JObject inp);
+        public event RecieveFile fileReceived;
+        public delegate void Recieve(Connector sender, ISendible inp);
         public event Recieve received;
         public delegate void ConnectionLost(Connector sender, Exception e);
-        public event ConnectionLost conLost;
+        public event ConnectionLost connectionLost;
         int conLostCount = 0;
         static Connector con;
         private Socket sock;
@@ -37,7 +37,7 @@ namespace FTP_Personal
         private Connector()
         {
             sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            ip = new IPAddress(IPAddress.Parse(File.ReadAllText("ip")).GetAddressBytes());
+            ip = new IPAddress(IPAddress.Parse("5.23.52.167").GetAddressBytes());
         }
 
         public static Connector GetConnector()
@@ -61,34 +61,30 @@ namespace FTP_Personal
                     {
                         while (sock.Connected)
                         {
-                            var str = ReceiveMessage();
-                            var t = JObject.Parse(str);
-                            if (t["type"].ToString() == "!Message")
+                            ISendible mess = ReceiveMessage();
+                            switch (mess.fInputType)
                             {
-                                msreceived?.Invoke(this, t);
-                                continue;
+                                case InputType.Input:
+                                    throw new ArgumentException("Server input receive by client");
+                                case InputType.Message:
+                                    messageReceived?.Invoke(this,mess);
+                                    break;
+                                case InputType.History:
+                                    historyReceived?.Invoke(this, mess);
+                                    break;
+                                case InputType.Refresh:
+                                    usersReceived?.Invoke(this, mess);
+                                    break;
+                                case InputType.Root:
+                                    rootReceived?.Invoke(this, mess);
+                                    break;
+                                case InputType.File:
+                                    fileReceived(this);
+                                    break;
+                                default:
+                                    received?.Invoke(this,mess);
+                                    break;
                             }
-                            if (t["type"].ToString() == "!Refresh")
-                            {
-                                usreceived?.Invoke(this, t);
-                                continue;
-                            }
-                            if (t["type"].ToString() == "!History")
-                            {
-                                hsreceived?.Invoke(this, t);
-                                continue;
-                            }
-                            if (t["type"].ToString() == "!Root")
-                            {
-                                rtreceived?.Invoke(this, t);
-                                continue;
-                            }
-                            if (t["type"].ToString() == "!File")
-                            {
-                                flreceived?.Invoke(this);
-                                continue;
-                            }
-                            received?.Invoke(this, t);
                         }
                     }
                     catch (Exception e)
@@ -100,7 +96,7 @@ namespace FTP_Personal
                         if (conLostCount < 4)
                         {
 
-                            conLost?.Invoke(this, e);
+                            connectionLost?.Invoke(this, e);
                             if (port == 25565)
                             {
                                 Connect(25566);
@@ -115,7 +111,7 @@ namespace FTP_Personal
                         {
                             Exception f = new Exception("ConnectionLostRestart", e);
 
-                            conLost?.Invoke(this, f);
+                            connectionLost?.Invoke(this, f);
                         }
 
                     }
@@ -125,15 +121,9 @@ namespace FTP_Personal
         }
 
 
-        public void SendTo(string str, string nick)
+        public void SendMessage(ISendible mess)
         {
-            var com = new Input() { type = "!Message", text = str, nick = nick };
-            var smess = com.ObJsStr();
-            SendMessage(smess);
-        }
-
-        public void SendMessage(string str)
-        {
+            string str = mess.ObJsStr();
             var packet = Encoding.UTF8.GetBytes(str);
             int size = packet.Length;
             byte[] sz = BitConverter.GetBytes(size);
@@ -194,7 +184,7 @@ namespace FTP_Personal
                 }
             } while (received < size);
         }
-        public string ReceiveMessage()
+        public ISendible ReceiveMessage()
         {
             byte[] size = new byte[4];
             Receive(sock, size, 0, size.Length, 100000);
@@ -202,7 +192,7 @@ namespace FTP_Personal
             byte[] buffer = new byte[sz];
             Receive(sock, buffer, 0, buffer.Length, 100000);
             var str = Encoding.UTF8.GetString(buffer);
-            return str;
+            return conv.Parse(str);
         }
         public byte[] ReceiveFile()
         {

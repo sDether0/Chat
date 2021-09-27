@@ -6,6 +6,31 @@ using Newtonsoft.Json.Linq;
 
 namespace JsonClasses
 {
+    public enum InputType
+    {
+        Input,
+        Message,
+        History,
+        Refresh,
+        Root,
+        NeedLogin,
+        File,
+        SuccessLogin,
+        SuccessSignin,
+        DeniedLogin,
+        DeniedSignin
+    }
+
+    public enum SecondType
+    {
+        Message,
+        GetFile,
+        Login,
+        SignIn, 
+        Refresh,
+        GetRoot,
+        GetHistory
+    }
     public static class conv
     {
         public static string ObJsStr(this object mess)
@@ -14,27 +39,81 @@ namespace JsonClasses
             var smess = jmess.ToString();
             return smess;
         }
+
+        public static Input ParseInput(string str)
+        {
+            return JObject.Parse(str).ToObject<Input>();
+        }
+        public static ISendible Parse(string str)
+        {
+            var type = JObject.Parse(str).ToObject<ISendible>();
+            ISendible mess = null;
+            switch (type.fInputType)
+            {
+                case InputType.Input:
+                    mess = ParseInput(str);
+                    break;
+                case InputType.Message:
+                    mess = ParseMessage(str);
+                    break;
+                case InputType.History:
+                    mess = ParseHistory(str);
+                    break;
+                case InputType.Refresh:
+                    mess = ParseRefresh(str);
+                    break;
+                case InputType.Root:
+                    mess = ParseRoot(str);
+                    break;
+                    
+                default:
+                    mess = type;
+                    break;
+            }
+
+            return mess;
+        }
+
+        public static Message ParseMessage(string str)
+        {
+            return JObject.Parse(str).ToObject<Message>();
+        }
+        public static History ParseHistory(string str)
+        {
+            return JObject.Parse(str).ToObject<History>();
+        }
+        public static Refresh ParseRefresh(string str)
+        {
+            return JObject.Parse(str).ToObject<Refresh>();
+        }
+        public static Root ParseRoot(string str)
+        {
+            return JObject.Parse(str).ToObject<Root>();
+        }
     }
-    public class Input
+    public class Input : ISendible
     {
-        public string type;
+        public Input() => fInputType = InputType.Input;
+        public SecondType sInputType;
         public string nick;
         public string text;
         public string file;
         public string pass;
         public string login;
     }
-    public abstract class ISender
+    
+    public class ISendible
     {
-
+        public InputType fInputType;
     }
-    public class Message : ISender
+    public class Message : ISendible
     {
-        public string type = "!Message";
+        
         public string text;
         public string nick;
         public Message(string text, string nick)
         {
+            fInputType = InputType.Message;
             this.text = text;
             this.nick = nick;
         }
@@ -43,29 +122,41 @@ namespace JsonClasses
     {
         public string nick;
         public string text;
+        public string login;
     }
-    public class History : ISender
+    public class Info : ISendible
     {
-        public string type = "!History";
-        public List<user> users = new List<user>();
+        
+    }
+    public class HistoryMessage
+    {
+        public string login;
+        public DateTime time;
+        public string text;
+        public bool self;
+    }
+    public class History : ISendible
+    {
+        public History()=>fInputType = InputType.History;
+        public List<HistoryMessage> messages = new List<HistoryMessage>();
 
-        public void Add(string nick, string text)
+        public void Add(DateTime time, string login, string text, bool self)
         {
-            users.Add(new user() { nick = nick, text = text });
+            messages.Add(new HistoryMessage() { login = login, time = time, text = text, self = self });
         }
     }
-    public class Refresh : ISender
+    public class Refresh : ISendible
     {
-        public string type = "!Refresh";
+        public Refresh() => fInputType = InputType.Refresh; 
         public List<user> users = new List<user>();
-        public void Add(string nick)
+        public void Add(string nick, string login)
         {
-            users.Add(new user() { nick = nick, text = null });
+            users.Add(new user() { nick = nick, login = login, text = null });
         }
     }
     public class SPath
     {
-        public SPath(string p,bool f)
+        public SPath(string p, bool f)
         {
             path = p;
             file = f;
@@ -73,10 +164,11 @@ namespace JsonClasses
         public string path;
         public bool file;
     }
-    public class Root : ISender
+    public class Root : ISendible
     {
-        public string type = "!Root";
+        public Root()=> fInputType = InputType.Root;
 
         public List<SPath> paths = new List<SPath>();
     }
+    
 }
