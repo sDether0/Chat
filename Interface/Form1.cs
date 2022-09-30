@@ -94,9 +94,9 @@ namespace Interface
             cn = Connector.GetConnector();
             EventBind();
             cn.Connect();
-            Icon ic = new Icon("icon.ico");
+            //Icon ic = new Icon("icon.ico");
             treeView1.ImageList = new ImageList();
-            treeView1.ImageList.Images.Add(ic);
+            //treeView1.ImageList.Images.Add(ic);
             //IPAddress ip = new IPAddress(IPAddress.Parse("127.0.0.1").GetAddressBytes());
             //tabControl1.SelectedTab = tabPage2;
 
@@ -125,10 +125,10 @@ namespace Interface
                     var key = myname + File.ReadAllText("key") + inpt.nick;
                     string mess = Crypto.Decrypt(inpt.text, key);
                     var tst = new ToastContentBuilder().AddHeader("Mess", inpt.nick, "").AddText(mess);
-                    
+
                     if (mess != null)
                     {
-                        chats[inpt.nick] += Environment.NewLine + mess;
+                        chats[inpt.nick] += mess + Environment.NewLine;
                         if (comboBox1.Text == inpt.nick)
                         {
                             textBox2.Text = chats[inpt.nick];
@@ -168,55 +168,50 @@ namespace Interface
         private void Cn_historyReceived(Connector sender, ISendible inp)
         {
             var inpt = (History)inp;
-            inpt.messages.ForEach(x =>
+            foreach (var key in chats.Keys)
             {
-                
-            });
+                chats[key] = "";
+            }
             inpt.messages.ForEach(x =>
             {
                 if (chats.ContainsKey(x.login))
                 {
-                    var todecr = x.text.Replace("\r", "").Split("\n");
+
                     var key = myname + File.ReadAllText("key") + x.login;
                     var rkey = x.login + File.ReadAllText("key") + myname;
-                    var res = String.Join(Environment.NewLine, todecr.ToList().Select(z =>
+                    string res = "";
+                    if (!string.IsNullOrEmpty(x.text))
                     {
-                        if (!string.IsNullOrEmpty(z))
+                        if (!x.self)
                         {
-                            if (Crypto.Decrypt(z, key) != null)
-                            {
-                                return Crypto.Decrypt(z, key);
-                            }
-                            else
-                            {
-                                return Crypto.Decrypt(z, rkey);
-                            }
+                            res = Crypto.Decrypt(x.text, key);
                         }
-                        return "";
-                    }));
-                    chats[x.login] = res;
+                        else
+                        {
+                            res = Crypto.Decrypt(x.text, rkey);
+                        }
+                    }
+
+                    
+                    chats[x.login] += res+ Environment.NewLine;
                 }
                 else
                 {
-                    var todecr = x.text.Replace("\r", "").Split("\n");
                     var key = myname + File.ReadAllText("key") + x.login;
                     var rkey = x.login + File.ReadAllText("key") + myname;
-                    var res = String.Join(Environment.NewLine, todecr.ToList().Select(z =>
+                    string res = "";
+                    if (!string.IsNullOrEmpty(x.text))
                     {
-                        if (!string.IsNullOrEmpty(z))
+                        if (!x.self)
                         {
-                            if (Crypto.Decrypt(z, key) != null)
-                            {
-                                return Crypto.Decrypt(z, key);
-                            }
-                            else
-                            {
-                                return Crypto.Decrypt(z, rkey);
-                            }
+                            res = Crypto.Decrypt(x.text, key);
                         }
-                        return "";
-                    }));
-                    chats.Add(x.login, res);
+                        else
+                        {
+                            res = Crypto.Decrypt(x.text, rkey);
+                        }
+                    }
+                    chats.Add(x.login, res+ Environment.NewLine);
                     Invoke(new Action(() =>
                     {
                         comboBox1.Items.Add(x.login);
@@ -300,12 +295,12 @@ namespace Interface
             {
                 Invoke(new Action(() => { comboBox1.SelectedIndex = 0; }));
             }
-            var mess = provider.CreateInput(sType:SecondType.GetHistory);
+            var mess = provider.CreateInput(sType: SecondType.GetHistory);
             cn.SendMessage(mess);
         }
         public void ComboBoxUpdate()
         {
-            string cur="";
+            string cur = "";
             Invoke(new Action(() =>
             {
                 cur = comboBox1.Text;
@@ -370,6 +365,7 @@ namespace Interface
                 var key = comboBox1.Text + File.ReadAllText("key") + myname;
                 string message = Crypto.Encrypt(textBox3.Text, key);
                 var mess = provider.CreateInput(sType: SecondType.Message, args: new[] { comboBox1.Text, message });
+                cn.SendMessage(mess);
                 chats[comboBox1.Text] += Environment.NewLine + textBox3.Text;
                 textBox3.Text = "";
                 textBox2.Text = chats[comboBox1.Text];
@@ -402,16 +398,16 @@ namespace Interface
 
         private void button3_Click(object sender, EventArgs e)
         {
-            
-                var mess = provider.CreateInput(sType:SecondType.Refresh);
-                cn.SendMessage(mess);
-                button3.Enabled = false;
-                Task.Delay(5000).ContinueWith(delegate
-                {
-                    Invoke(new Action(() => { button3.Enabled = true; }));
-                });
-                
-            
+
+            var mess = provider.CreateInput(sType: SecondType.Refresh);
+            cn.SendMessage(mess);
+            button3.Enabled = false;
+            Task.Delay(5000).ContinueWith(delegate
+            {
+                Invoke(new Action(() => { button3.Enabled = true; }));
+            });
+
+
         }
 
         private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
@@ -421,15 +417,15 @@ namespace Interface
 
         private void button4_Click(object sender, EventArgs e)
         {
-            
-                var mess = provider.CreateInput(sType: SecondType.GetRoot);
-                cn.SendMessage(mess);
-                button4.Enabled = false;
-                Task.Delay(5000).ContinueWith(delegate
-                {
-                    Invoke(new Action(() => { button4.Enabled = true; }));
-                });
-            
+
+            var mess = provider.CreateInput(sType: SecondType.GetRoot);
+            cn.SendMessage(mess);
+            button4.Enabled = false;
+            Task.Delay(5000).ContinueWith(delegate
+            {
+                Invoke(new Action(() => { button4.Enabled = true; }));
+            });
+
         }
 
         private void button5_Click(object sender, EventArgs e)
@@ -442,7 +438,7 @@ namespace Interface
                 fbd.RootFolder = Environment.SpecialFolder.Desktop;
                 if (fbd.ShowDialog() == DialogResult.OK)
                 {
-                    var mess = provider.CreateInput(sType:SecondType.GetFile,args:treeView1.SelectedNode.FullPath);
+                    var mess = provider.CreateInput(sType: SecondType.GetFile, args: treeView1.SelectedNode.FullPath);
                     cn.SendMessage(mess);
                     Task.Delay(1200);
                     var name = treeView1.SelectedNode.Text;
@@ -458,7 +454,7 @@ namespace Interface
 
         private void button6_Click(object sender, EventArgs e)
         {
-            var mess = provider.CreateInput(sType: SecondType.Login,args:new[]{textBox4.Text,textBox5.Text});
+            var mess = provider.CreateInput(sType: SecondType.Login, args: new[] { textBox4.Text, textBox5.Text });
             cn.SendMessage(mess);
             myname = textBox4.Text;
         }

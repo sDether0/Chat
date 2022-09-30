@@ -1,1 +1,1 @@
-Server=5.23.52.167;Database=ftp_chat;User=sDether;Password=1namQfeg1_;
+Server=localhost;Database=ftp_chat;User=sDether;Password=1namQfeg1_;

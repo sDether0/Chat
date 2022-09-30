@@ -37,7 +37,7 @@ namespace FTP_Personal
         private Connector()
         {
             sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            ip = new IPAddress(IPAddress.Parse("5.23.52.167").GetAddressBytes());
+            ip = new IPAddress(IPAddress.Parse("176.213.142.216").GetAddressBytes());
         }
 
         public static Connector GetConnector()

@@ -14,7 +14,6 @@ using Microsoft.VisualBasic;
 using Logger.Writer;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using static Server.Program;
 using System.Data;
 using JsonClasses;
 
@@ -43,70 +42,70 @@ namespace Server
         [Command(SecondType.Message)]
         public static void Message(Socket sock, Input inp)
         {
-            if (connectedSockets.Any(x => x.sock.Contains(sock)))
+            if (Program.connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
-                connectedSockets.Find(x => x.Name == inp.nick).sock.ForEach(r =>
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + Program.connectedSockets.Find(x => x.sock.Contains(sock))?.Name);
+                Program.connectedSockets.Find(x => x.Name == inp.nick)?.sock.ForEach(r =>
                 {
-                    var mess = new Message(inp.text,connectedSockets.Find(f=>f.sock.Contains(sock)).Name);
-                    cl.SendMessage(r, mess);
+                    var mess = new Message(inp.text, Program.connectedSockets.Find(f=>f.sock.Contains(sock))?.Name);
+                    Program.cl.SendMessage(r, mess);
                 });
                 DebugLog.WriteLine("Start saving");
-                MessageHistory.SaveMessage(connectedSockets.Find(x => x.sock.Contains(sock)).Name, inp.nick, inp.text);
+                MessageHistory.SaveMessage(Program.connectedSockets.Find(x => x.sock.Contains(sock))?.Name, inp.nick, inp.text);
                 DebugLog.WriteLine("Saving success");
             }
             else
             {
-                cl.SendMessage(sock, provider.NeedLogin);
+                Program.cl.SendMessage(sock, Program.provider.NeedLogin);
             }
         }
 
         [Command(SecondType.GetHistory)]
         public static void GetHistory(Socket sock, Input inp)
         {
-            if (connectedSockets.Any(x => x.sock.Contains(sock)))
+            if (Program.connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
-                var list = MessageHistory.GetMessageHistory(connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + Program.connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                var list = MessageHistory.GetMessageHistory(Program.connectedSockets.Find(x => x.sock.Contains(sock)).Name);
                 var mess = new History();
                 mess.messages = list;
-                cl.SendMessage(sock, mess);
+                Program.cl.SendMessage(sock, mess);
             }
             else
             {
-                cl.SendMessage(sock, provider.NeedLogin);
+                Program.cl.SendMessage(sock, Program.provider.NeedLogin);
             }
         }
 
         [Command(SecondType.Refresh)]
         public static void Refresh(Socket sock, Input inp)
         {
-            if (connectedSockets.Any(x => x.sock.Contains(sock)))
+            if (Program.connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
-                var sender = connectedSockets.Find(x => x.sock.Contains(sock)).Name;
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + Program.connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                var sender = Program.connectedSockets.Find(x => x.sock.Contains(sock)).Name;
                 var mess = new Refresh();
-                connectedSockets.ForEach(x =>
+                Program.connectedSockets.ForEach(x =>
                 {
                     if (x.Name != sender)
                     {
                         mess.Add(x.Nick, x.Name);
                     }
                 });
-                cl.SendMessage(sock, mess);
+                Program.cl.SendMessage(sock, mess);
             }
             else
             {
-                cl.SendMessage(sock, provider.NeedLogin);
+                Program.cl.SendMessage(sock, Program.provider.NeedLogin);
             }
         }
 
         [Command(SecondType.GetRoot)]
         public static void GetRoot(Socket sock, Input inp)
         {
-            if (connectedSockets.Any(x => x.sock.Contains(sock)))
+            if (Program.connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + Program.connectedSockets.Find(x => x.sock.Contains(sock)).Name);
                 var mess = new Root();
                 var files = Directory.GetFiles(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "*",
                     SearchOption.AllDirectories);
@@ -121,29 +120,29 @@ namespace Server
                         mess.paths.Add(new SPath(x, false));
                     }
                 });
-                cl.SendMessage(sock, mess);
+                Program.cl.SendMessage(sock, mess);
             }
             else
             {
-                cl.SendMessage(sock, provider.NeedLogin);
+                Program.cl.SendMessage(sock, Program.provider.NeedLogin);
             }
         }
 
         [Command(SecondType.GetFile)]
         public static void GetFile(Socket sock, Input inp)
         {
-            if (connectedSockets.Any(x => x.sock.Contains(sock)))
+            if (Program.connectedSockets.Any(x => x.sock.Contains(sock)))
             {
-                DebugLog.WriteLine(inp.sInputType.ToString() + " " + connectedSockets.Find(x => x.sock.Contains(sock)).Name);
-                cl.SendMessage(sock, provider.File);
+                DebugLog.WriteLine(inp.sInputType.ToString() + " " + Program.connectedSockets.Find(x => x.sock.Contains(sock)).Name);
+                Program.cl.SendMessage(sock, Program.provider.File);
                 DebugLog.WriteLine(inp.file);
                 long s = File.OpenRead(inp.file).Length;
                 var file = File.ReadAllBytes(inp.file);
-                cl.SendFile(sock, file);
+                Program.cl.SendFile(sock, file);
             }
             else
             {
-                cl.SendMessage(sock, provider.NeedLogin);
+                Program.cl.SendMessage(sock, Program.provider.NeedLogin);
             }
         }
 
@@ -162,17 +161,17 @@ namespace Server
                 if (dt.Rows?[0][1].ToString() == name && dt.Rows?[0][2].ToString() == pass)
                 {
                     Console.WriteLine($"{name} success login!");
-                    if (!connectedSockets.Any(x => x.sock.Contains(sock)) && connectedSockets.Any(x=>x.Name==name))
+                    if (!Program.connectedSockets.Any(x => x.sock.Contains(sock)) && Program.connectedSockets.Any(x=>x.Name==name))
                     {
-                        connectedSockets.Find(x => x.Name == name).sock.Add(sock);
+                        Program.connectedSockets.Find(x => x.Name == name).sock.Add(sock);
                     }
 
-                    cl.SendMessage(sock, provider.SuccessLogin);
+                    Program.cl.SendMessage(sock, Program.provider.SuccessLogin);
                     DebugLog.WriteLine("Sended");
                     return;
                 }
             }
-            cl.SendMessage(sock, provider.DeniedLogin);
+            Program.cl.SendMessage(sock, Program.provider.DeniedLogin);
 
         }
 
@@ -192,15 +191,15 @@ namespace Server
             if (dt.Rows.Count > 0)
             {
                 Console.WriteLine("Denied");
-                cl.SendMessage(sock, provider.DeniedSignin);
+                Program.cl.SendMessage(sock, Program.provider.DeniedSignin);
             }
             else
             {
                 DebugLog.WriteLine("Inserting");
                 Mysql.com("Insert into users (Username, Password) values (@p1, @p2)", new[] { name, pass });
                 Console.WriteLine("Success");
-                connectedSockets.Add(new UsSocket(name,nick, sock));
-                cl.SendMessage(sock, provider.SuccessSignin);
+                Program.connectedSockets.Add(new UsSocket(name,nick, sock));
+                Program.cl.SendMessage(sock, Program.provider.SuccessSignin);
             }
         }
     }
@@ -265,7 +264,6 @@ namespace Server
             {
                 try
                 {
-
                     while (sock.Connected)
                     {
                         var res = cl.ReceiveMessage(sock);
@@ -283,6 +281,8 @@ namespace Server
                         connectedSockets.Find(x => x.sock.Contains(sock)).sock.Remove(sock); 
                         
                     }
+
+                    throw;
                 }
             }).Start();
         }
